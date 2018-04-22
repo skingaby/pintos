@@ -113,8 +113,6 @@ sub parse_command_line {
     $align = "bochs",
       print STDERR "warning: setting --align=bochs for Bochs support\n"
 	if $sim eq 'bochs' && defined ($align) && $align eq 'none';
-
-    $kill_on_failure = 0;
 }
 
 # usage($exitcode).
@@ -128,8 +126,8 @@ Usage: pintos [OPTION...] -- [ARGUMENT...]
 where each OPTION is one of the following options
   and each ARGUMENT is passed to Pintos kernel verbatim.
 Simulator selection:
-  --bochs                  (default) Use Bochs as simulator
-  --qemu                   Use QEMU as simulator
+  --qemu                   (default) Use QEMU as simulator
+  --bochs                  Use Bochs as simulator
   --player                 Use VMware Player as simulator
 Debugger selection:
   --no-debug               (default) No debugger
@@ -256,7 +254,7 @@ sub set_disk {
 sub find_disks {
     # Find kernel, if we don't already have one.
     if (!exists $parts{KERNEL}) {
-	my $name = find_file ("/Users/stevenkingaby/Documents/Studies/Computing/Projects/pintos-os/pintos/src/threads/build/kernel.bin");
+	my $name = find_file ('kernel.bin');
 	die "Cannot find kernel\n" if !defined $name;
 	do_set_part ('KERNEL', 'file', $name);
     }
@@ -273,15 +271,15 @@ sub find_disks {
     }
 
     # Warn about (potentially) missing partitions.
-    if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
-	if ((grep ($project eq $_, qw (userprog vm filesys)))
+    if (my ($task) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
+	if ((grep ($task eq $_, qw (userprog vm filesys)))
 	    && !defined $parts{FILESYS}) {
-	    print STDERR "warning: it looks like you're running the $project ";
-	    print STDERR "project, but no file system partition is present\n";
+	    print STDERR "warning: it looks like you're running the $task ";
+	    print STDERR "task, but no file system partition is present\n";
 	}
-	if ($project eq 'vm' && !defined $parts{SWAP}) {
-	    print STDERR "warning: it looks like you're running the $project ";
-	    print STDERR "project, but no swap partition is present\n";
+	if ($task eq 'vm' && !defined $parts{SWAP}) {
+	    print STDERR "warning: it looks like you're running the $task ";
+	    print STDERR "task, but no swap partition is present\n";
 	}
     }
 
@@ -632,6 +630,7 @@ sub run_qemu {
     push (@cmd, '-S') if $debug eq 'monitor';
     push (@cmd, '-s', '-S') if $debug eq 'gdb';
     push (@cmd, '-monitor', 'null') if $vga eq 'none' && $debug eq 'none';
+    push (@cmd, '--no-kvm');
     run_command (@cmd);
 }
 
@@ -913,7 +912,7 @@ sub get_load_average {
 # Calls setitimer to set a timeout, then execs what was passed to us.
 sub exec_setitimer {
     if (defined $timeout) {
-	if ($] ge 5.8.0 && $^O != 'darwin') {
+	if ($ ge 5.8.0) {
 	    eval "
               use Time::HiRes qw(setitimer ITIMER_VIRTUAL);
               setitimer (ITIMER_VIRTUAL, $timeout, 0);
